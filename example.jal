@@ -1,0 +1,14 @@
+some_subroutine:
+    ; HSJ_SET = "  \n0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~äÄöÖß§┌┐└┘├┤┬┴─│┼╔╗╚╝╠╣╦╩═║╬░▒▓█▀▄▌▐━┃┯┷┠┨┿╀╁╂╃╄╅╆╇╈╉╊╋←↑→↓↔↕¦™©®±²³⁰⁴⁵⁶⁷⁸⁹⁺⁻₀₁₂₃₄₅₆₇₈₉                                                                        " # the first element here doesnt matter because you cant print it (its a NUL)
+    LIA 0x14 ; Load immediate value 0x14 (20 in decimal) into the accumulator, which is H
+    STA 0xFDF9 ; Store into output
+    LIA 0x2F ; i
+    STA 0xFDFA ; Store into output
+    LIA 0x41 ; !
+    STA 0xFDFB ; Store into output
+    LIA 0x00 ; NUL terminator
+    STA 0xFDFC ; Store into output
+    OUT
+    HLT
+
+CAL some_subroutine

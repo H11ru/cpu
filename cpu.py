@@ -3,6 +3,8 @@ class CPU:
     MODDED = False
     IDXNME = "Jade v1.2"
     def __init__(self, mem, start_pos):
+        if isinstance(mem, bytearray): # NOTE: add support for bytearrays
+            mem = list(mem)
         self.STACK_LENGTH = 255
         self.runtime = 0
         self.RESERVED = 8 + self.STACK_LENGTH # 2 (start vector) + 1 (stack ptr) + 1 (A) + 1 (X) + 1 (Y) + 2 (PC)
@@ -61,31 +63,70 @@ class CPU:
             pc += 1
 
         elif opcode == 0xA9: # LDA immediate
+            if pc + 1 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to read from reserved area")
+                    self.halted = True
+                return
             value = self.mem[pc + 1]
             self._set_a(value)
             pc += 2
 
         elif opcode == 0xA2: # LDX immediate
+            if pc + 1 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to read from reserved area")
+                    self.halted = True
+                return
             value = self.mem[pc + 1]
             self._set_x(value)
             pc += 2
 
         elif opcode == 0xA0: # LDY immediate
+            if pc + 1 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to read from reserved area")
+                    self.halted = True
+                return
             value = self.mem[pc + 1]
             self._set_y(value)
             pc += 2
 
         elif opcode == 0x8D: # STA absolute
+            # segfault if writing to reserved area
+            if pc + 2 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to write to reserved area")
+                    self.halted = True
+                return
             addr = self.mem[pc + 1] | (self.mem[pc + 2] << 8)
             self.mem[addr] = self._get_a()
             pc += 3
 
         elif opcode == 0x8E: # STX absolute
+            # segfault if writing to reserved area
+            if pc + 2 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to write to reserved area")
+                    self.halted = True
+                return
             addr = self.mem[pc + 1] | (self.mem[pc + 2] << 8)
             self.mem[addr] = self._get_x()
             pc += 3
 
         elif opcode == 0x8C: # STY absolute
+            # segfault if writing to reserved area
+            if pc + 2 >= 65536 - self.RESERVED:
+                if not self.halted:
+                    print(f"SEGFAULT")
+                    print(f"PC: {pc:04X} - Attempted to write to reserved area")
+                    self.halted = True
+                return
             addr = self.mem[pc + 1] | (self.mem[pc + 2] << 8)
             self.mem[addr] = self._get_y()
             pc += 3
@@ -123,8 +164,9 @@ class CPU:
 
             output = []
             for i in range(start, end):
+                #print(f"mem[{i:04X}] = {self.mem[i]:02X}")
                 if self.mem[i] == 0:
-                    break
+                    break#continue
                 output.append(HSJ_SET[self.mem[i]])
             print(''.join(output))
             pc += 1
