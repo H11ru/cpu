@@ -4,6 +4,7 @@ class CPU:
     IDXNME = "Jade v1.2"
     def __init__(self, mem, start_pos):
         self.STACK_LENGTH = 255
+        self.runtime = 0
         self.RESERVED = 8 + self.STACK_LENGTH # 2 (start vector) + 1 (stack ptr) + 1 (A) + 1 (X) + 1 (Y) + 2 (PC)
         if len(mem) < 65536 - self.RESERVED:
             raise ValueError("Memory must be at least 65528 bytes")
@@ -40,6 +41,11 @@ class CPU:
         return self.mem[65536 - 3]
 
     def clock(self):
+        self.runtime += 1
+        if self.runtime > 100000:
+            print("CPU melted")
+            self.halted = True
+            return
         pc_addr = 65536 - 2
         pc = self._get_word(pc_addr)
         opcode = self.mem[pc]
@@ -121,8 +127,6 @@ class CPU:
                     break
                 output.append(HSJ_SET[self.mem[i]])
             print(''.join(output))
-            print("DEBUG: out data was:     ", ''.join(output))
-            print("full data would be: ", ''.join([HSJ_SET[x] for x in self.mem[start:end]]))
             pc += 1
 
         elif opcode == 0x22:  # JSR absolute (choose an unused opcode, e.g. 0x22)
