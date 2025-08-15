@@ -87,20 +87,7 @@ class CPU:
             addr = self.mem[pc + 1] | (self.mem[pc + 2] << 8)
             pc = addr
 
-        elif opcode == 0x20: # OUT
-            # prints the content of the last 256 (or terminated by 00) bytes of memory before reserved area to the console as HSJ characters
-            # because HSJ doesnt have mosto f the control characters, it has more useufl characters than ASCII that all fit in 256 values!
-            HSJ_SET = "  \n0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~äÄöÖß§┌┐└┘├┤┬┴─│┼╔╗╚╝╠╣╦╩═║╬░▒▓█▀▄▌▐━┃┯┷┠┨┿╀╁╂╃╄╅╆╇╈╉╊╋←↑→↓↔↕¦™©®±²³⁰⁴⁵⁶⁷⁸⁹⁺⁻₀₁₂₃₄₅₆₇₈₉                                                                        " # the first element here doesnt matter because you cant print it (its a NUL)
-            start = 65536 - self.RESERVED - 256
-            end = 65536 - self.RESERVED
 
-            output = []
-            for i in range(start, end):
-                if self.mem[i] == 0:
-                    break
-                output.append(HSJ_SET[self.mem[i]])
-            print(''.join(output))
-            pc += 1
         elif opcode == 0xFF: # stop
             if self.halted == False: print("bai!!!"); self.halted = True
             # Dont increment pc, so if clock is called again, it wont do anything else and maybe overrun, instead just tays at the end
@@ -118,8 +105,23 @@ class CPU:
             self._set_a(result)
             pc += 2
 
-        elif opcode == 0x20:  # OUT (already present)
-            # ...existing OUT code...
+        elif opcode == 0x20:
+            #print("OIUT occured)")
+            # [ERR] you, this OUT instruciton needs to be reimplemented
+            # Prints the last 256 (or terminated by 00) bytes of memory before reserved area to the console as HSJ characters
+            # because HSJ doesnt have mosto f the control characters, it has more useufl characters than ASCII that all fit in 256 values!
+            HSJ_SET = "  \n0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~äÄöÖß§┌┐└┘├┤┬┴─│┼╔╗╚╝╠╣╦╩═║╬░▒▓█▀▄▌▐━┃┯┷┠┨┿╀╁╂╃╄╅╆╇╈╉╊╋←↑→↓↔↕¦™©®±²³⁰⁴⁵⁶⁷⁸⁹⁺⁻₀₁₂₃₄₅₆₇₈₉                                                                        " # the first element here doesnt matter because you cant print it (its a NUL)
+            start = 65536 - self.RESERVED - 256
+            end = 65536 - self.RESERVED
+
+            output = []
+            for i in range(start, end):
+                if self.mem[i] == 0:
+                    break
+                output.append(HSJ_SET[self.mem[i]])
+            print(''.join(output))
+            print("DEBUG: out data was:     ", ''.join(output))
+            print("full data would be: ", ''.join([HSJ_SET[x] for x in self.mem[start:end]]))
             pc += 1
 
         elif opcode == 0x22:  # JSR absolute (choose an unused opcode, e.g. 0x22)
@@ -132,14 +134,30 @@ class CPU:
             self.mem[0x0100 + ((sp - 1) & 0xFF)] = (ret_addr >> 8) & 0xFF
             self.mem[sp_addr] = (sp - 2) & 0xFF
             pc = addr
+        elif opcode == 0x8E: # CDH (convert decimal hex). what this does is: it takes the current value in A and cvonverts it to decimal (e.g. 0x2A becomes 42) and then converts it to hex (e.g. 42 becomes 0x2A) and stores it in A, X, and Y in that oerder. so if ots 123, A is set to 1, X to 2, and Y to 3.
+            value = self._get_a() # get the valeu from the accumulator
+            brr = str(value) # convert it to a string
+            brr = brr.zfill(3) # pad it with zeros to 3 digits
+            # now we have a string like "042" or "123"
+            self._set_a(int(brr[0]) + 2)
+            self._set_x(int(brr[1]) + 2)
+            self._set_y(int(brr[2]) + 2)
+            pc += 1
 
         elif opcode == 0x60:  # RTS (ReTurn from Subroutine)
             sp_addr = 65536 - 6
             sp = (self.mem[sp_addr] + 2) & 0xFF
             ret_lo = self.mem[0x0100 + sp]
             ret_hi = self.mem[0x0100 + ((sp - 1) & 0xFF)]
+            # stack undefrlow
+            if sp < 2:
+                print("STKUDFLW")
+                self.halted = True
+                print(f"PC: {pc:04X} - Stack underflow, trying to pop from empty stack")
+                return
             self.mem[sp_addr] = sp
             pc = ret_lo | (ret_hi << 8)
+            
 
         else:
             # Unknown opcode: skip
@@ -150,40 +168,3 @@ class CPU:
     def run_until_halt(self):
         while not self.halted:
             self.clock()
-
-
-
-
-
-# Test
-# Example test for writing and printing "Hello, world!" using STA
-mem = [0] * (65536 - (8 + 255)) # user memory, not including reserved
-HSJ_SET = "  \n0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~äÄöÖß§┌┐└┘├┤┬┴─│┼╔╗╚╝╠╣╦╩═║╬░▒▓█▀▄▌▐━┃┯┷┠┨┿╀╁╂╃╄╅╆╇╈╉╊╋←↑→↓↔↕¦™©®±²³⁰⁴⁵⁶⁷⁸⁹⁺⁻₀₁₂₃₄₅₆₇₈₉                                                                        "
-def hord(c):
-    return HSJ_SET.index(c) if c != " " else 1
-output_str = "Jade says 'Hello, world!'"
-output_bytes = [hord(c) for c in output_str] + [0] # NUL-terminated
-program_start = 0x0200
-outbuf_start = 65536 - (8 + 255) - 256
-# Assemble the program
-pc = program_start
-for i, b in enumerate(output_bytes):
-    # LDA #imm
-    mem[pc] = 0xA9
-    mem[pc + 1] = b
-    pc += 2
-    # STA abs
-    addr = outbuf_start + i
-    mem[pc] = 0x8D
-    mem[pc + 1] = addr & 0xFF
-    mem[pc + 2] = (addr >> 8) & 0xFF
-    pc += 3
-# OUT
-mem[pc] = 0x20
-pc += 1
-# stop
-mem[pc] = 0xFF
-# Create CPU and run the program
-cpu = CPU(mem, program_start)
-# run
-cpu.run_until_halt()
