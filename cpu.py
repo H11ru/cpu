@@ -1,4 +1,5 @@
 class CPU:
+    "this docstring is very helpful"
     MODDED = False
     IDXNME = "Jade v1.2"
     def __init__(self, mem, start_pos):
