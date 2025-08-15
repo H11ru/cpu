@@ -105,6 +105,42 @@ class CPU:
             if self.halted == False: print("bai!!!"); self.halted = True
             # Dont increment pc, so if clock is called again, it wont do anything else and maybe overrun, instead just tays at the end
             return
+        
+        elif opcode == 0x69:  # ADC immediate (Add with Carry, but here just ADD)
+            value = self.mem[pc + 1]
+            result = (self._get_a() + value) & 0xFF
+            self._set_a(result)
+            pc += 2
+
+        elif opcode == 0xE9:  # SBC immediate (Subtract with Carry, but here just SUB)
+            value = self.mem[pc + 1]
+            result = (self._get_a() - value) & 0xFF
+            self._set_a(result)
+            pc += 2
+
+        elif opcode == 0x20:  # OUT (already present)
+            # ...existing OUT code...
+            pc += 1
+
+        elif opcode == 0x22:  # JSR absolute (choose an unused opcode, e.g. 0x22)
+            addr = self.mem[pc + 1] | (self.mem[pc + 2] << 8)
+            # Push return address (pc+3) to stack
+            sp_addr = 65536 - 6
+            sp = self.mem[sp_addr]
+            ret_addr = (pc + 3) & 0xFFFF
+            self.mem[0x0100 + sp] = ret_addr & 0xFF
+            self.mem[0x0100 + ((sp - 1) & 0xFF)] = (ret_addr >> 8) & 0xFF
+            self.mem[sp_addr] = (sp - 2) & 0xFF
+            pc = addr
+
+        elif opcode == 0x60:  # RTS (ReTurn from Subroutine)
+            sp_addr = 65536 - 6
+            sp = (self.mem[sp_addr] + 2) & 0xFF
+            ret_lo = self.mem[0x0100 + sp]
+            ret_hi = self.mem[0x0100 + ((sp - 1) & 0xFF)]
+            self.mem[sp_addr] = sp
+            pc = ret_lo | (ret_hi << 8)
+
         else:
             # Unknown opcode: skip
             pc = (pc + 1) & 0xFFFF
